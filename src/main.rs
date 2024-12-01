@@ -1,13 +1,12 @@
 use hyper::{Request, Response, Body, Server};
 use hyper::service::{make_service_fn, service_fn};
 use std::convert::Infallible;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use url::Url;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::LazyLock;
 
 // set up the static visit count variable
-static VISIT_COUNT: LazyLock<Arc<AtomicU64>> = LazyLock::new(|| Arc::new(AtomicU64::new(0)));
+static VISIT_COUNT: LazyLock<Arc<Mutex<u64>>> = LazyLock::new(|| Arc::new(Mutex::new(0)));
 
 #[tokio::main]
 async fn main() {
@@ -34,7 +33,9 @@ async fn handle_request(req: Request<Body>) -> Result<Response<Body>, Infallible
     match path {
         "/count" => {
             let count_clone = Arc::clone(&VISIT_COUNT);
-            println!("Visit count: {}",count_clone.fetch_add(1, Ordering::SeqCst)+1);
+            let mut num = count_clone.lock().unwrap();
+            *num += 1;
+            println!("Visit count: {}",*num);
         },
         "/songs/new" => {
             println!("new");
